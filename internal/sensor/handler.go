@@ -37,5 +37,6 @@ func sensorServeWs(c *gin.Context, h *ws.Hub) {
 		return
 	}
 
-	NewSensorClient(conn, h)
+	sc := NewSensorClient(conn, h)
+	sensorClients[sc.Client.Id] = sc
 }

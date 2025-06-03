@@ -5,26 +5,60 @@ import (
 	"log"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
-type Client struct {
-	Id      string
-	conn    *websocket.Conn
-	Send    chan []byte
-	Receive chan []byte
-	hub     *Hub
+// For use in struct fields, method receivers, etc.
+type Client interface {
+	Id() string
+	Conn() *websocket.Conn
+	Send() chan []byte
+	Receive() chan []byte
+	UnRegister() chan Client
 }
 
-func NewClient(h *Hub, conn *websocket.Conn) *Client {
-	return &Client{
-		Id:      uuid.NewString(),
-		Receive: make(chan []byte),
-		Send:    make(chan []byte),
-		hub:     h,
+// For generic use only
+type ComparableClient interface {
+	Client
+	comparable
+}
+
+type BaseClient struct {
+	id         string
+	conn       *websocket.Conn
+	send       chan []byte
+	receive    chan []byte
+	unregister chan Client
+}
+
+func NewBaseClient(id string, conn *websocket.Conn) *BaseClient {
+	return &BaseClient{
+		id:      id,
 		conn:    conn,
+		send:    make(chan []byte, 256),
+		receive: make(chan []byte, 256),
 	}
+}
+
+// Interface methods
+func (c *BaseClient) Id() string {
+	return c.id
+}
+
+func (c *BaseClient) Conn() *websocket.Conn {
+	return c.conn
+}
+
+func (c *BaseClient) Send() chan []byte {
+	return c.send
+}
+
+func (c *BaseClient) Receive() chan []byte {
+	return c.receive
+}
+
+func (c *BaseClient) Unregister() chan Client {
+	return c.unregister
 }
 
 const (
@@ -46,10 +80,11 @@ var (
 	space   = []byte{' '}
 )
 
-func (c *Client) ReadPump() {
+func (c *BaseClient) ReadPump() {
 	defer func() {
-		c.hub.unregister <- c
+		c.unregister <- c
 		c.conn.Close()
+		close(c.Receive())
 	}()
 
 	c.conn.SetReadLimit(maxMessageSize)
@@ -68,22 +103,23 @@ func (c *Client) ReadPump() {
 
 		// Send to domain handler
 		select {
-		case c.Receive <- message:
+		case c.Receive() <- message:
 		default:
-			log.Printf("Receive channel full for client %s", c.Id)
+			log.Printf("Receive channel full for client %s", c.id)
 		}
 	}
 }
 
-func (c *Client) WritePump() {
+func (c *BaseClient) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
 		c.conn.Close()
 	}()
+
 	for {
 		select {
-		case message, ok := <-c.Send:
+		case message, ok := <-c.send:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if !ok {
 				// The hub closed the channel.
@@ -98,10 +134,10 @@ func (c *Client) WritePump() {
 			w.Write(message)
 
 			// Add queued chat messages to the current websocket message.
-			n := len(c.Send)
+			n := len(c.send)
 			for range n {
 				w.Write(newline)
-				w.Write(<-c.Send)
+				w.Write(<-c.send)
 			}
 
 			if err := w.Close(); err != nil {

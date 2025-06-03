@@ -8,28 +8,28 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+var sensorClients = make(map[string]*SensorClient)
+
 type SensorClient struct {
-	Client        *ws.Client
+	*ws.BaseClient
 	Subscriptions map[string]bool
 }
 
-func NewSensorClient(conn *websocket.Conn, hub *ws.Hub) *SensorClient {
-	base := ws.NewClient(hub, conn)
+func NewSensorClient(conn *websocket.Conn, hub *ws.Hub[*SensorClient]) *SensorClient {
 	sc := &SensorClient{
-		Client:        base,
 		Subscriptions: make(map[string]bool),
 	}
-	hub.Register <- base
+	hub.Register <- sc
 
-	go base.ReadPump()
-	go base.WritePump()
+	go sc.ReadPump()
+	go sc.WritePump()
 	go sc.handleMessages()
 
 	return sc
 }
 
 func (sc *SensorClient) handleMessages() {
-	for msg := range sc.Client.Receive {
+	for msg := range sc.Receive() {
 		var payload struct {
 			Subscribe []string `json:"subscribe"`
 		}
@@ -38,7 +38,13 @@ func (sc *SensorClient) handleMessages() {
 		}
 		for _, s := range payload.Subscribe {
 			sc.Subscriptions[s] = true
-			log.Printf("Client %v subscribed to %v", sc.Client.Id, s)
+			log.Printf("Client %v subscribed to %v", sc.Id(), s)
 		}
+	}
+}
+
+func (sc *SensorClient) handleUnsubscribe(h *ws.Hub[*SensorClient]) {
+	for msg := range sc.Unregister() {
+		h.Unregister <- sc
 	}
 }
