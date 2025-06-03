@@ -2,13 +2,11 @@ package sensor
 
 import (
 	"encoding/json"
-	"home-monitor/internal/ws"
 	"log"
+	"qtpi/internal/ws"
 
 	"github.com/gorilla/websocket"
 )
-
-var sensorClients = make(map[string]*SensorClient)
 
 type SensorClient struct {
 	*ws.BaseClient

@@ -1,8 +1,8 @@
 package sensor
 
 import (
-	"home-monitor/internal/ws"
 	"net/http"
+	"qtpi/internal/ws"
 	"time"
 
 	"github.com/gin-gonic/gin"

@@ -1,7 +1,7 @@
 package sensor
 
 import (
-	"home-monitor/internal/ws"
+	"qtpi/internal/ws"
 
 	"github.com/gin-gonic/gin"
 )
