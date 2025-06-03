@@ -19,6 +19,10 @@ func NewSensorClient(conn *websocket.Conn, hub *ws.Hub[*SensorClient]) *SensorCl
 	sc := &SensorClient{
 		Subscriptions: make(map[string]bool),
 	}
+	sc.OnUnregister = func() {
+		hub.Unregister <- sc
+	}
+
 	hub.Register <- sc
 
 	go sc.ReadPump()
@@ -40,11 +44,5 @@ func (sc *SensorClient) handleMessages() {
 			sc.Subscriptions[s] = true
 			log.Printf("Client %v subscribed to %v", sc.Id(), s)
 		}
-	}
-}
-
-func (sc *SensorClient) handleUnsubscribe(h *ws.Hub[*SensorClient]) {
-	for msg := range sc.Unregister() {
-		h.Unregister <- sc
 	}
 }

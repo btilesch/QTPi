@@ -14,7 +14,6 @@ type Client interface {
 	Conn() *websocket.Conn
 	Send() chan []byte
 	Receive() chan []byte
-	UnRegister() chan Client
 }
 
 // For generic use only
@@ -24,11 +23,11 @@ type ComparableClient interface {
 }
 
 type BaseClient struct {
-	id         string
-	conn       *websocket.Conn
-	send       chan []byte
-	receive    chan []byte
-	unregister chan Client
+	id           string
+	conn         *websocket.Conn
+	send         chan []byte
+	receive      chan []byte
+	OnUnregister func()
 }
 
 func NewBaseClient(id string, conn *websocket.Conn) *BaseClient {
@@ -37,6 +36,12 @@ func NewBaseClient(id string, conn *websocket.Conn) *BaseClient {
 		conn:    conn,
 		send:    make(chan []byte, 256),
 		receive: make(chan []byte, 256),
+	}
+}
+
+func (c *BaseClient) triggerUnregister() {
+	if c.OnUnregister != nil {
+		c.OnUnregister()
 	}
 }
 
@@ -55,10 +60,6 @@ func (c *BaseClient) Send() chan []byte {
 
 func (c *BaseClient) Receive() chan []byte {
 	return c.receive
-}
-
-func (c *BaseClient) Unregister() chan Client {
-	return c.unregister
 }
 
 const (
@@ -82,7 +83,7 @@ var (
 
 func (c *BaseClient) ReadPump() {
 	defer func() {
-		c.unregister <- c
+		c.triggerUnregister()
 		c.conn.Close()
 		close(c.Receive())
 	}()

@@ -29,10 +29,10 @@ func Server() {
 	api := apiRouter.Group("/api")
 	sensor.AddSensorRoutes(api)
 
-	hub := ws.NewHub()
-	go ws.RunHub(hub)
+	sh := ws.NewHub[*sensor.SensorClient]()
+	go sh.Run()
 
-	sensor.AddSensorWs(api, hub)
+	sensor.AddSensorWs(api, sh)
 
 	serverPath := fmt.Sprintf("%s:%d", *host, *port)
 	log.Printf("Server started at http://%s ...\n", serverPath)
