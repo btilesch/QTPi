@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -30,9 +31,9 @@ type BaseClient struct {
 	OnUnregister func()
 }
 
-func NewBaseClient(id string, conn *websocket.Conn) *BaseClient {
+func NewBaseClient(conn *websocket.Conn) *BaseClient {
 	return &BaseClient{
-		id:      id,
+		id:      uuid.NewString(),
 		conn:    conn,
 		send:    make(chan []byte, 256),
 		receive: make(chan []byte, 256),

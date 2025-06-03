@@ -17,8 +17,10 @@ type SensorClient struct {
 
 func NewSensorClient(conn *websocket.Conn, hub *ws.Hub[*SensorClient]) *SensorClient {
 	sc := &SensorClient{
+		BaseClient:    ws.NewBaseClient(conn),
 		Subscriptions: make(map[string]bool),
 	}
+
 	sc.OnUnregister = func() {
 		hub.Unregister <- sc
 	}
