@@ -1,7 +1,7 @@
 package main
 
 import (
-	"home-monitor/internal/server"
+	"qtpi/internal/server"
 )
 
 func main() {

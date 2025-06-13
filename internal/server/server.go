@@ -5,12 +5,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"home-monitor/internal/sensor"
-	"home-monitor/internal/ws"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"qtpi/internal/sensor"
+	"qtpi/internal/ws"
 	"syscall"
 	"time"
 
@@ -29,10 +29,10 @@ func Server() {
 	api := apiRouter.Group("/api")
 	sensor.AddSensorRoutes(api)
 
-	hub := ws.NewHub()
-	go ws.RunHub(hub)
+	sh := ws.NewHub[*sensor.SensorClient]()
+	go sh.Run()
 
-	sensor.AddSensorWs(api, hub)
+	sensor.AddSensorWs(api, sh)
 
 	serverPath := fmt.Sprintf("%s:%d", *host, *port)
 	log.Printf("Server started at http://%s ...\n", serverPath)

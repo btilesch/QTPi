@@ -1,8 +1,8 @@
 package sensor
 
 import (
-	"home-monitor/internal/ws"
 	"net/http"
+	"qtpi/internal/ws"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -30,7 +30,7 @@ func sensorLatestHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, data)
 }
 
-func sensorServeWs(c *gin.Context, h *ws.Hub) {
+func sensorServeWs(c *gin.Context, h *ws.Hub[*SensorClient]) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Failed to upgrade to websocket"})
